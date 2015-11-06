@@ -1,0 +1,55 @@
+#!/bin/bash 
+#####################################################################
+#
+# Configures a simple Couchbase cluster on an Ubuntu 12.04 nodes
+# 
+# Notes: This has to run only on the initial node
+# 
+# Maintainer: Samuel Cozannet <samuel@blended.io>, http://blended.io 
+#
+#####################################################################
+
+COUCHBASE_IPS="FOUND_COUCHBASE_IPS"
+MY_IP="$(hostname -i)"
+export CB_REST_USERNAME=CB_DEFAULT_USERNAME
+export CB_REST_PASSWORD=CB_DEFAULT_PASSWORD
+
+echo "Waiting for couchbase-server..."
+seconds=0
+CHECK_SVR_CMD="/opt/couchbase/bin/couchbase-cli server-info -c 127.0.0.1:CB_CLUSTER_PORT \
+    -u ${CB_REST_USERNAME} -p ${CB_REST_PASSWORD}"
+until ${CHECK_SVR_CMD} > /dev/null; do
+    sleep 3
+    seconds=$((seconds+3))
+    if [ $seconds -gt 60 ]; then
+        echo "Time out waiting for couchbase-server"
+        ${CHECK_SVR_CMD}
+        exit 1
+    fi
+done
+
+echo "initializing..."
+/opt/couchbase/bin/couchbase-cli cluster-init -c 127.0.0.1:CB_CLUSTER_PORT \
+ -u ${CB_REST_USERNAME} -p ${CB_REST_PASSWORD} \
+ --cluster-init-username=CB_CLUSTER_USER \
+ --cluster-init-password=CB_CLUSTER_PASSWORD \
+ --cluster-init-port=CB_CLUSTER_PORT \
+ --cluster-init-ramsize=4096
+
+export CB_REST_USERNAME=CB_CLUSTER_USER
+export CB_REST_PASSWORD=CB_CLUSTER_PASSWORD
+
+echo "Adding nodes..."
+for NODE in ${COUCHBASE_IPS} ; do
+	if [ "${NODE}" != "${MY_IP}" ]; then 
+		/opt/couchbase/bin/couchbase-cli server-add \
+		 -u ${CB_REST_USERNAME} -p ${CB_REST_PASSWORD} \
+		 --cluster=127.0.0.1:CB_CLUSTER_PORT \
+		 --server-add=${NODE}:CB_CLUSTER_PORT \
+		 --server-add-username=CB_DEFAULT_USERNAME \
+		 --server-add-password=CB_DEFAULT_PASSWORD
+	fi
+done
+
+echo "Rebalancing..."
+/opt/couchbase/bin/couchbase-cli rebalance --cluster=127.0.0.1:CB_CLUSTER_PORT 

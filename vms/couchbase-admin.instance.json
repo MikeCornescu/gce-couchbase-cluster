@@ -1,0 +1,71 @@
+{
+  "zone": "ZONE",
+  "name": "couchbase-001",
+  "description": "Couchbase server",
+  "tags": {
+    "items": [
+      "couchbase",
+      "couchbase-admin"
+    ],
+  },
+  "machineType": "zones/us-central1-f/machineTypes/n1-standard-2",
+  "canIpForward": false,
+  "networkInterfaces": [
+    {
+      "network": "/projects/blendedio-1028/global/networks/default",
+      "accessConfigs": [
+        {
+          "type": "ONE_TO_ONE_NAT",
+          "name": "default",
+        }
+      ]
+    }
+  ],
+  "disks": [
+    {
+      "index": 0,
+      "type": "PERSISTENT",
+      "mode": "READ_WRITE",
+      "deviceName": "boot",
+      "boot": true,
+      "initializeParams": {
+        "sourceImage": "ubuntu-1204-precise-v20150625",
+        "diskSizeGb": 1000,
+        "diskType": "zones/us-central1-f/diskTypes/pd-standard"
+      },
+      "autoDelete": true,
+      "interface": "SCSI"
+    },
+    {
+      "index": 1,
+      "type": "PERSISTENT",
+      "mode": "READ_WRITE",
+      "deviceName": "data",
+      "boot": false,
+      "initializeParams": {
+        "diskSizeGb": 1010000,
+        "diskType": "zones/us-central1-f/diskTypes/pd-ssd"
+      },
+      "autoDelete": false,
+      "interface": "SCSI"
+    }
+
+  ],
+  "metadata": {
+    "items": [
+      {
+        "key": "name",
+        "value": "couchbase"
+      },
+      {
+        "key": "role",
+        "value": "admin"
+      }
+    ]
+  },
+  "scheduling": {
+    "onHostMaintenance": "MICRATE",
+    "automaticRestart": true,
+    "preemptible": false
+  },
+}

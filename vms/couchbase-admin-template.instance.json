@@ -1,0 +1,71 @@
+{
+  "zone": "ZONE",
+  "name": "couchbase-001",
+  "description": "Couchbase server",
+  "tags": {
+    "items": [
+      "couchbase",
+      "couchbase-admin"
+    ],
+  },
+  "machineType": "zones/ZONE/machineTypes/DEFAULT-MACHINE-TYPE",
+  "canIpForward": false,
+  "networkInterfaces": [
+    {
+      "network": "/projects/PROJECT_ID/global/networks/COUCHBASE_CLUSTER_NETWORK",
+      "accessConfigs": [
+        {
+          "type": "ONE_TO_ONE_NAT",
+          "name": "COUCHBASE_CLUSTER_NETWORK",
+        }
+      ]
+    }
+  ],
+  "disks": [
+    {
+      "index": 0,
+      "type": "PERSISTENT",
+      "mode": "READ_WRITE",
+      "deviceName": "boot",
+      "boot": true,
+      "initializeParams": {
+        "sourceImage": "ubuntu-1204-precise-v20150625",
+        "diskSizeGb": 1000,
+        "diskType": "zones/ZONE/diskTypes/pd-standard"
+      },
+      "autoDelete": true,
+      "interface": "SCSI"
+    },
+    {
+      "index": 1,
+      "type": "PERSISTENT",
+      "mode": "READ_WRITE",
+      "deviceName": "data",
+      "boot": false,
+      "initializeParams": {
+        "diskSizeGb": 1010000,
+        "diskType": "zones/ZONE/diskTypes/local-ssd"
+      },
+      "autoDelete": false,
+      "interface": "NVMe"
+    }
+
+  ],
+  "metadata": {
+    "items": [
+      {
+        "key": "name",
+        "value": "couchbase"
+      },
+      {
+        "key": "role",
+        "value": "admin"
+      }
+    ]
+  },
+  "scheduling": {
+    "onHostMaintenance": "MICRATE",
+    "automaticRestart": true,
+    "preemptible": false
+  },
+}

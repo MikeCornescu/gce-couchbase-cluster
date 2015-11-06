@@ -1,0 +1,10 @@
+{
+  "name": "couchbase-DISK_ID-data",
+  "description": "Disk for Couchbase Node DISK_ID",
+  "image": "",
+  "image-project": "",
+  "size": "DISK_SIZEGB",
+  "source-snapshot": "",
+  "type": "DISK_TYPE",
+  "zone": ""
+}
