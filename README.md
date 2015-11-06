@@ -1,4 +1,4 @@
-# Installing Couchbase at scale on GCE
+# Installing Couchbase at scale on Google Compute Engine (GCE)
 
 This project is about deploying a Couchbase Cluster on GCE, at a predictable scale, with minimum user interaction. Beside configuration, this would mean 2 command lines.
 
