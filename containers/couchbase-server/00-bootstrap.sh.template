@@ -1,18 +1,17 @@
 #!/bin/bash 
 #####################################################################
 #
-# Deploy Couchbase Server on an Ubuntu 12.04 node
+# Deploy Couchbase Server on an Ubuntu 14.04 node
 # 
 # Maintainer: Samuel Cozannet <samuel@blended.io>, http://blended.io 
 #
 #####################################################################
 
 COUCHBASE_EDITION=community
-COUCHBASE_VERSION=3.0.1
-COUCHBASE_ARCH=ubuntu12.04_amd64
+COUCHBASE_VERSION=4.0.0
+COUCHBASE_ARCH=ubuntu14.04_amd64
 PKG_FILE="couchbase-server-${COUCHBASE_EDITION}_${COUCHBASE_VERSION}-${COUCHBASE_ARCH}.deb"
-COUCHBASE_MD5="43ba70b1ec886f2b688e8c59e06d8721"
-
+COUCHBASE_MD5="950bf7eeebc139c1602d322d675e6d98"
 # Manage Mount Point
 MOUNT_POINT="/opt/couchbase/var"
 mkdir -p "${MOUNT_POINT}"
@@ -31,7 +30,7 @@ IS_OK="0"
 while [ "${IS_OK}" = "0" ]; do 
 	[ -f "${PKG_FILE}" ] && rm -f "${PKG_FILE}"
 
-	wget -c http://packages.couchbase.com.s3.amazonaws.com/releases/"${COUCHBASE_VERSION}"/"${PKG_FILE}"
+	wget -c http://packages.couchbase.com/releases/"${COUCHBASE_VERSION}"/"${PKG_FILE}"
 	
 	PKG_MD5="$(md5sum "${PKG_FILE}" | cut -f1 -d' ')"
 

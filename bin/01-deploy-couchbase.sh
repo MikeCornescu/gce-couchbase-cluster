@@ -1,7 +1,7 @@
 #!/bin/bash
 #####################################################################
 #
-# Deploy Couchbase on N GCE instances running Ubuntu 12.04
+# Deploy Couchbase 4.0.0 on 3 GCE instances running Ubuntu 14.04
 #
 # Notes: This could be improved with a Configuration Engine
 #   such as http://tugdualgrall.blogspot.fr/2013/05/create-couchbase-cluster-in-one-command.html
@@ -12,7 +12,7 @@
 
 # Validating I am running on debian-like OS
 [ -f /etc/debian_version ] || {
-	echo "We are not running on a Debian-like system.."
+	echo "We are not running on a Debian-like system. Exiting..."
 	exit 0
 }
 
@@ -39,7 +39,7 @@ for file in "${MYCONF}" "${MYLIB}" "${MYSERVICECONF}" "${MYDIR}/../lib/gcelib.sh
 done 
 
 if [ "${CB_DEP_MODE}" != "gce" ]; then
-	die This script deploys Couchbase with containers on GCE. Please update etc/socius-couchbase.conf 
+	die This script deploys Couchbase with containers on GCE. Please update etc/couchbase.conf 
 fi
 
 # Check if we are sudoer or not
@@ -75,7 +75,7 @@ for NODE_ID in $(seq -f "%03g" 1 1 ${CB_CLUSTER_SIZE}); do
 	log debug Creating instance ${MYSERVICE}-${NODE_ID}
 	gcloud compute instances create ${MYSERVICE}-${NODE_ID} \
 		--machine-type "${DEFAULT_MACHINE_TYPE}" \
-		--image ubuntu-12-04 \
+		--image ubuntu-14-04 \
 		--zone ${ZONE} \
 		--disk name=${MYSERVICE}-${NODE_ID}-data,device-name="${MYSERVICE}"-data,mode=rw,boot=no,auto-delete=yes \
 		1>/dev/null 2>/dev/null \
