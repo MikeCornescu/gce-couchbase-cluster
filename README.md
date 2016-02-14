@@ -13,6 +13,16 @@ First you need to make sure you cloned this repo:
 	git clone https://github.com/blendedio/gce-couchbase-cluster couchbase
 	cd couchbase
 
+### Picking your version
+
+If you'd like to deploy a Community Server 3.0.1, do: 
+
+	git checkout 3.0.1
+
+If you'd like to deploy a Community Server 4.0.0, do
+
+	git checkout 4.0.0
+
 ### Configuring Google Cloud Platform & project
 
 First you need to create a project in your Google Cloud Platform, then configure the following settings in **etc/project.conf**:

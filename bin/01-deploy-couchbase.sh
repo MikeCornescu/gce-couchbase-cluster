@@ -39,7 +39,7 @@ for file in "${MYCONF}" "${MYLIB}" "${MYSERVICECONF}" "${MYDIR}/../lib/gcelib.sh
 done 
 
 if [ "${CB_DEP_MODE}" != "gce" ]; then
-	die This script deploys Couchbase with containers on GCE. Please update etc/socius-couchbase.conf 
+	die This script deploys Couchbase with containers on GCE. Please update etc/couchbase.conf 
 fi
 
 # Check if we are sudoer or not
