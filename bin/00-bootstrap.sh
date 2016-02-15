@@ -1,7 +1,7 @@
 #!/bin/bash
 #####################################################################
 #
-# Initialize Socius Live environment
+# Initialize environment
 #
 # Notes: 
 #   * GCloud Disk Doc: https://cloud.google.com/compute/docs/disks/#comparison_of_disk_types
