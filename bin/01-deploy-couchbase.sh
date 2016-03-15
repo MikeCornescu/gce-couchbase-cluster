@@ -21,8 +21,6 @@ MYNAME="$(readlink -f "$0")"
 MYSERVICE="couchbase"
 MYDIR="$(dirname "${MYNAME}")"
 MYCONF="${MYDIR}/../etc/project.conf"
-MYSERVICECONF="${MYDIR}/../etc/${MYSERVICE}.conf"
-MYLIB="${MYDIR}/../lib/bashlib.sh"
 MYVOLUMESDIR="${MYDIR}/../persistent-disks"
 
 if [ $(grep "YOUR_PROJECT_NAME" "${MYCONF}" | wc -l ) -eq 1 ]
@@ -31,26 +29,25 @@ then
     exit 1
 fi
 
-for file in "${MYCONF}" "${MYLIB}" "${MYSERVICECONF}" "${MYDIR}/../lib/gcelib.sh"; do
-	[ -f ${file} ] && source ${file} || { 
-		echo "Could not find required file ${file}.."
-		exit 1
-	}
+for file in $(find ${MYDIR}/../etc -name "*.conf") $(find ${MYDIR}/../lib -name "*lib*.sh" | sort) ; do
+    echo Sourcing ${file}
+    source ${file}
+    sleep 1
 done 
 
 if [ "${CB_DEP_MODE}" != "gce" ]; then
-	die This script deploys Couchbase with containers on GCE. Please update etc/couchbase.conf 
+	bash::lib::die This script deploys Couchbase with containers on GCE. Please update etc/couchbase.conf 
 fi
 
 # Check if we are sudoer or not
-if [ $(is_sudoer) -eq 0 ]; then
-    die "You must be root or sudo to run this script"
+if [ $(bash::lib::is_sudoer) -eq 0 ]; then
+    bash::lib::die "You must be root or sudo to run this script"
 fi
 
 [ ! -d "${MYDIR}/../tmp" ] && mkdir -p "${MYDIR}/../tmp"
 
 # Setup
-switch_project
+gce::lib::switch_project
 
 #####################################################################
 #
@@ -60,34 +57,34 @@ switch_project
 
 # Create infrastructure
 NODE_LIST=""
-log debug Creating Infrastructure
+bash::lib::log debug Creating Infrastructure
 for NODE_ID in $(seq -f "%03g" 1 1 ${CB_CLUSTER_SIZE}); do
 	# Create data disk
-	log debug Creating disk for ${MYSERVICE}-${NODE_ID}
+	bash::lib::log debug Creating disk for ${MYSERVICE}-${NODE_ID}
 	sed -e s/DISK_ID/${NODE_ID}/g \
 		-e s/DISK_SIZE/${CB_DEFAULT_DISK_SIZE}/g \
 		-e s/DISK_TYPE/${CB_DEFAULT_DISK_TYPE}/g \
 		"${MYVOLUMESDIR}/${MYSERVICE}-disk.json.template" > "${MYDIR}/../tmp/${MYSERVICE}-${NODE_ID}.json"
 
-	create_gcloud_disk "${MYDIR}/../tmp/${MYSERVICE}-${NODE_ID}.json"
+	gce::lib::create_gcloud_disk "${MYDIR}/../tmp/${MYSERVICE}-${NODE_ID}.json"
 
 	# Create instances
-	log debug Creating instance ${MYSERVICE}-${NODE_ID}
+	bash::lib::log debug Creating instance ${MYSERVICE}-${NODE_ID}
 	gcloud compute instances create ${MYSERVICE}-${NODE_ID} \
 		--machine-type "${DEFAULT_MACHINE_TYPE}" \
 		--image ubuntu-14-04 \
 		--zone ${ZONE} \
 		--disk name=${MYSERVICE}-${NODE_ID}-data,device-name="${MYSERVICE}"-data,mode=rw,boot=no,auto-delete=yes \
 		1>/dev/null 2>/dev/null \
-		&& log info Successfully created Instance ${MYSERVICE}-${NODE_ID} \
-		|| die Could not create instance ${MYSERVICE}-${NODE_ID}
+		&& bash::lib::log info Successfully created Instance ${MYSERVICE}-${NODE_ID} \
+		|| bash::lib::die Could not create instance ${MYSERVICE}-${NODE_ID}
 
 	# Create Firewall rules
-	log debug Adding tags to units for load balancing
+	bash::lib::log debug Adding tags to units for load balancing
 	gcloud compute instances add-tags "${MYSERVICE}-${NODE_ID}" --tags "cb-lb" \
 		1>/dev/null 2>/dev/null \
-		&& log info Successfully tagged Instance ${MYSERVICE}-${NODE_ID} as cb-lb \
-		|| die Could not tag instance ${MYSERVICE}-${NODE_ID} with cb-lb
+		&& bash::lib::log info Successfully tagged Instance ${MYSERVICE}-${NODE_ID} as cb-lb \
+		|| bash::lib::die Could not tag instance ${MYSERVICE}-${NODE_ID} with cb-lb
 	EXT_FW_LIST="tcp:${CB_CLUSTER_PORT}"
 	for PORT in 8092 ; do
 		EXT_FW_LIST="${EXT_FW_LIST},tcp:${PORT}"
@@ -104,13 +101,13 @@ for NODE_ID in $(seq -f "%03g" 1 1 ${CB_CLUSTER_SIZE}); do
 	fi
 done
 
-log debug Create firewall rule for traffic on ${EXT_FW_LIST}
+bash::lib::log debug Create firewall rule for traffic on ${EXT_FW_LIST}
 gcloud compute firewall-rules create "cb-fw" \
 	--target-tags "cb-lb" \
 	--allow "${EXT_FW_LIST}" \
 	1>/dev/null 2>/dev/null \
-	&& log info Successfully created Firewall Rule cb-fw \
-	|| die Could not create Firewall rule cb-fw
+	&& bash::lib::log info Successfully created Firewall Rule cb-fw \
+	|| bash::lib::die Could not create Firewall rule cb-fw
 
 #####################################################################
 #
@@ -122,20 +119,20 @@ gcloud compute firewall-rules create "cb-fw" \
 
 # INT_FW_LIST="tcp:11209-11211"
 
-#log debug Create firewall rule for traffic on ${INT_FW_LIST}
+#bash::lib::log debug Create firewall rule for traffic on ${INT_FW_LIST}
 #gcloud compute firewall-rules create "cb-fw-gke" \
 #	--target-tags "cb-lb" \
 #	--allow "${INT_FW_LIST}" \
 #	--source-ranges 10.200.0.0/14 10.240.0.0/16
 
-log debug Writing install scripts for this cluster
+bash::lib::log debug Writing install scripts for this cluster
 FOUND_COUCHBASE_IPS=""
 while [ "x${FOUND_COUCHBASE_IPS}" = "x" ]; do 
 	FOUND_COUCHBASE_IPS="$(gcloud compute instances list --format json | jq '.[].networkInterfaces | .[].networkIP' | tr -d "\"" | tr '\n' ' ')"
 	sleep 5
 done
 
-log info found IP Addresses \"${FOUND_COUCHBASE_IPS}\" for cluster
+bash::lib::log info found IP Addresses \"${FOUND_COUCHBASE_IPS}\" for cluster
 
 #####################################################################
 #
@@ -160,38 +157,38 @@ chmod +x "${MYDIR}/../tmp/00-bootstrap.sh"
 chmod +x "${MYDIR}/../tmp/01-deploy.sh"
 
 # Copy & execute scripts to instances
-log debug Copying scripts to instances
+bash::lib::log debug Copying scripts to instances
 for NODE_ID in $(seq -f "%03g" 1 1 ${CB_CLUSTER_SIZE}); do
-	log debug Copying files to ${MYSERVICE}-${NODE_ID}
+	bash::lib::log debug Copying files to ${MYSERVICE}-${NODE_ID}
 	gcloud compute copy-files \
 		"${MYDIR}/../tmp/01-deploy.sh" \
 		"${MYDIR}/../tmp/00-bootstrap.sh" \
 		"${MYSERVICE}-${NODE_ID}":~/ \
 		--zone "${ZONE}" \
 		1>/dev/null 2>/dev/null \
-		&& log info Successfully copied scripts to ${MYSERVICE}-${NODE_ID} \
-		|| die Could not copy scripts ${MYSERVICE}-${NODE_ID}
+		&& bash::lib::log info Successfully copied scripts to ${MYSERVICE}-${NODE_ID} \
+		|| bash::lib::die Could not copy scripts ${MYSERVICE}-${NODE_ID}
 
-	log debug Setting exec flag on scripts on ${MYSERVICE}-${NODE_ID}
+	bash::lib::log debug Setting exec flag on scripts on ${MYSERVICE}-${NODE_ID}
 	gcloud compute ssh "${MYSERVICE}-${NODE_ID}" --command "chmod +x ~/*.sh" \
 		1>/dev/null 2>/dev/null
-	log debug Executing bootstrap on ${MYSERVICE}-${NODE_ID}
+	bash::lib::log debug Executing bootstrap on ${MYSERVICE}-${NODE_ID}
 	gcloud compute ssh "${MYSERVICE}-${NODE_ID}" --command "sudo ~/00-bootstrap.sh" \
 		1>/dev/null 2>/dev/null \
-		&& log info Successfully bootstrapped Instance ${MYSERVICE}-${NODE_ID} \
-		|| die Could not bootstrap instance ${MYSERVICE}-${NODE_ID}
+		&& bash::lib::log info Successfully bootstrapped Instance ${MYSERVICE}-${NODE_ID} \
+		|| bash::lib::die Could not bootstrap instance ${MYSERVICE}-${NODE_ID}
 done
 
 # Wait a few secs for cluster to be up everywhere
-log debut Let us sleep for 30sec so our nodes start nicely...
+bash::lib::log debug Let us sleep for 30sec so our nodes start nicely...
 sleep 30 
 
 # Create Cluster (only on first node)
-log debug Executing Deploy on "${MYSERVICE}-001"
+bash::lib::log debug Executing Deploy on "${MYSERVICE}-001"
 gcloud compute ssh "${MYSERVICE}-001" --command "sudo ~/01-deploy.sh" \
 		1>/dev/null 2>/dev/null \
-		&& log info Successfully deployed Instance ${MYSERVICE} \
-		|| die Could not deploy ${MYSERVICE}
+		&& bash::lib::log info Successfully deployed Instance ${MYSERVICE} \
+		|| bash::lib::die Could not deploy ${MYSERVICE}
 
 #####################################################################
 #
@@ -204,12 +201,12 @@ gcloud compute ssh "${MYSERVICE}-001" --command "sudo ~/01-deploy.sh" \
 sleep 10
 
 # Creating load balancer service
-log debug Creating Load balancer
+bash::lib::log debug Creating Load balancer
 gcloud compute addresses create network-lb-ip-1 \
     --region "${REGION}" \
 	1>/dev/null 2>/dev/null \
-	&& log info Successfully created network network-lb-ip-1 \
-	|| die Could not create network network-lb-ip-1
+	&& bash::lib::log info Successfully created network network-lb-ip-1 \
+	|| bash::lib::die Could not create network network-lb-ip-1
 
 # Adding health check for cluster 
 # See https://issues.couchbase.com/browse/MB-5814
@@ -217,22 +214,22 @@ gcloud compute http-health-checks create cb-check \
 	--port ${CB_CLUSTER_PORT} \
 	--request-path "/pools/default/buckets/${CB_DEFAULT_BUCKET}/stats" \
 	1>/dev/null 2>/dev/null \
-	&& log info Successfully created health-check cb-check \
-	|| die Could not create health-check cb-check
+	&& bash::lib::log info Successfully created health-check cb-check \
+	|| bash::lib::die Could not create health-check cb-check
 
 gcloud compute target-pools create cb-pool \
     --region "${REGION}" \
     --health-check cb-check \
 	1>/dev/null 2>/dev/null \
-	&& log info Successfully created target-pool cb-pool \
-	|| die Could not create target-pool cb-pool
+	&& bash::lib::log info Successfully created target-pool cb-pool \
+	|| bash::lib::die Could not create target-pool cb-pool
 
 gcloud compute target-pools add-instances cb-pool \
     --instances "${NODE_LIST}" \
     --zone "${ZONE}" \
 	1>/dev/null 2>/dev/null \
-	&& log info Successfully add instances to cb-pool \
-	|| die Could not add instances to cb-pool
+	&& bash::lib::log info Successfully add instances to cb-pool \
+	|| bash::lib::die Could not add instances to cb-pool
 
 STATIC_EXTERNAL_IP="$(gcloud compute addresses list | tail -n1 | awk '{ print $3 }')"
 
@@ -242,8 +239,8 @@ gcloud compute forwarding-rules create cb-rule \
     --target-pool cb-pool \
     --address "${STATIC_EXTERNAL_IP}" \
 	1>/dev/null 2>/dev/null \
-	&& log info Successfully created forwarding rule cb-rule \
-	|| die Could not create forwarding rule cb-rule
+	&& bash::lib::log info Successfully created forwarding rule cb-rule \
+	|| bash::lib::die Could not create forwarding rule cb-rule
 
-log debug Successfully deployed a load balanced Couchbase Cluster
-log debug You can access it on "${STATIC_EXTERNAL_IP}" on ports "${EXT_FW_LIST}"
+bash::lib::log debug Successfully deployed a load balanced Couchbase Cluster
+bash::lib::log debug You can access it on "${STATIC_EXTERNAL_IP}" on ports "${EXT_FW_LIST}"

@@ -19,25 +19,22 @@
 # Load Configuration
 MYNAME="$(readlink -f "$0")"
 MYDIR="$(dirname "${MYNAME}")"
-MYCONF="${MYDIR}/../etc/project.conf"
-MYLIB="${MYDIR}/../lib/bashlib.sh"
 
-for file in "${MYCONF}" "${MYLIB}" "${MYDIR}/../etc/couchbase.conf" "${MYDIR}/../lib/gcelib.sh"; do
-	[ -f ${file} ] && source ${file} || { 
-		echo "Could not find required files. Exiting..."
-		exit 0
-	}
+for file in $(find ${MYDIR}/../etc -name "*.conf") $(find ${MYDIR}/../lib -name "*lib*.sh" | sort) ; do
+    echo Sourcing ${file}
+    source ${file}
+    sleep 1
 done 
 
 # Check install of all dependencies
-ensure_cmd_or_install_package_apt jq jq
+bash::lib::ensure_cmd_or_install_package_apt jq jq
 
 # Check install Google Cloud SDK 
-ensure_gcloud_or_install
-log debug ready to start...
+gce::lib::ensure_gcloud_or_install
+bash::lib::log debug ready to start...
 
 # Initialize environment
-switch_project
+gce::lib::switch_project
 
 #####################################################################
 #
@@ -67,21 +64,33 @@ case "${CB_DEP_MODE}" in
 	"gce" )
 		# Delete Couchbase Load Balancing
 		gcloud compute forwarding-rules delete -q cb-rule \
-			|| log err Could not delete forwarding-rules
+			2>/dev/null 1>/dev/null && \
+			bash::lib::log info Deleted forwarding-rules || \
+			bash::lib::die Could not delete forwarding-rules
 		gcloud compute target-pools delete -q cb-pool \
-			|| log err Could not delete target-pools
+			2>/dev/null 1>/dev/null && \
+			bash::lib::log info Deleted target-pools || \
+			bash::lib::die Could not delete target-pools
 		gcloud compute http-health-checks delete -q cb-check  \
-			|| log err Could not delete http-health-checks
+			2>/dev/null 1>/dev/null && \
+			bash::lib::log info Deleted http-health-checks || \
+			bash::lib::die Could not delete http-health-checks
 		gcloud compute addresses delete -q network-lb-ip-1  \
-			|| log err Could not delete addresses
+			2>/dev/null 1>/dev/null && \
+			bash::lib::log info Deleted addresses || \
+			bash::lib::die Could not delete addresses
 		gcloud compute firewall-rules delete -q cb-fw \
-			|| log err Could not delete firewall rules
+			2>/dev/null 1>/dev/null && \
+			bash::lib::log info Deleted firewall-rules || \
+			bash::lib::die Could not delete firewall-rules
 
 		# Delete Couchbase Instances
 		for NODE_ID in $(seq -f "%03g" 1 1 ${CB_CLUSTER_SIZE}); do
 			# Delete instances
 			gcloud compute instances delete -q ${MYSERVICE}-${NODE_ID} \
-				|| log err Could not delete instances
+				2>/dev/null 1>/dev/null && \
+				bash::lib::log info Deleted compute instances || \
+				bash::lib::die Could not delete compute instances
 
 			# Delete data disk
 			#gcloud compute disks delete -q "${MYSERVICE}-${NODE_ID}-data" \
@@ -89,7 +98,7 @@ case "${CB_DEP_MODE}" in
 		done
 	;;
 	* )
-		log notice CB_DEP_MODE can only be gce or gke. Update etc/socius-couchbase.conf
+		bash::lib::log notice CB_DEP_MODE can only be gce or gke. Update etc/couchbase.conf
 	;;
 esac
 
