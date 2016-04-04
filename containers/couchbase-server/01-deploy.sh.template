@@ -1,7 +1,7 @@
 #!/bin/bash 
 #####################################################################
 #
-# Configures a simple Couchbase cluster on an Ubuntu 12.04 nodes
+# Configures a simple Couchbase cluster on an Ubuntu 14.04 nodes
 # 
 # Notes: This has to run only on the initial node
 # 
@@ -29,12 +29,14 @@ until ${CHECK_SVR_CMD} > /dev/null; do
 done
 
 echo "initializing..."
-/opt/couchbase/bin/couchbase-cli cluster-init -c 127.0.0.1:CB_CLUSTER_PORT \
- -u ${CB_REST_USERNAME} -p ${CB_REST_PASSWORD} \
- --cluster-init-username=CB_CLUSTER_USER \
- --cluster-init-password=CB_CLUSTER_PASSWORD \
- --cluster-init-port=CB_CLUSTER_PORT \
- --cluster-init-ramsize=4096
+/opt/couchbase/bin/couchbase-cli cluster-init -c 127.0.0.1:8091 \
+	-u ${CB_REST_USERNAME} \
+	-p ${CB_REST_PASSWORD}  \
+	--cluster-username=CB_CLUSTER_USER  \
+	--cluster-password=CB_CLUSTER_PASSWORD  \
+	--cluster-port=CB_CLUSTER_PORT  \
+	--cluster-ramsize=4096 \
+	--services=data,index,query
 
 export CB_REST_USERNAME=CB_CLUSTER_USER
 export CB_REST_PASSWORD=CB_CLUSTER_PASSWORD
@@ -42,12 +44,14 @@ export CB_REST_PASSWORD=CB_CLUSTER_PASSWORD
 echo "Adding nodes..."
 for NODE in ${COUCHBASE_IPS} ; do
 	if [ "${NODE}" != "${MY_IP}" ]; then 
-		/opt/couchbase/bin/couchbase-cli server-add \
-		 -u ${CB_REST_USERNAME} -p ${CB_REST_PASSWORD} \
-		 --cluster=127.0.0.1:CB_CLUSTER_PORT \
-		 --server-add=${NODE}:CB_CLUSTER_PORT \
-		 --server-add-username=CB_DEFAULT_USERNAME \
-		 --server-add-password=CB_DEFAULT_PASSWORD
+        /opt/couchbase/bin/couchbase-cli server-add \
+			-u ${CB_REST_USERNAME} \
+			-p ${CB_REST_PASSWORD} \
+			-c 127.0.0.1:8091 \
+			--server-add=${NODE}:8091 \
+			--server-add-username=CB_DEFAULT_USERNAME \
+			--server-add-password=CB_DEFAULT_PASSWORD \
+			--services=data,index,query
 	fi
 done
 

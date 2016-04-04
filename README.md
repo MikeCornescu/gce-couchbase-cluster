@@ -10,7 +10,7 @@ First you need to make sure you cloned this repo:
 	sudo apt-get update && sudo apt-get install git-core
 	[ ! -d ~/src ] && mkdir -p ~/src
 	cd ~/src
-	git clone https://github.com/blendedio/gce-couchbase-cluster couchbase
+	git clone --recursive https://github.com/blendedio/gce-couchbase-cluster couchbase
 	cd couchbase
 
 ### Picking your version
